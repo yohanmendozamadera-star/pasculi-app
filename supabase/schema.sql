@@ -15,6 +15,7 @@ create table if not exists categories (
 
 create table if not exists providers (
   id uuid primary key default gen_random_uuid(),
+  auth_user_id uuid references auth.users(id),
   nombre_completo text not null,
   identificacion text not null,
   celular text not null unique,
@@ -33,6 +34,14 @@ create table if not exists providers (
   tiktok_url text,
   profile_views integer not null default 0,
   created_at timestamptz not null default now()
+);
+
+-- Administradores reales. Sin políticas públicas: solo la función
+-- is_admin() (security definer) la puede leer. Después de correr este
+-- script, agrega tu propia cuenta:
+--   insert into admins (user_id) select id from auth.users where email = 'tu-correo-admin@ejemplo.com';
+create table if not exists admins (
+  user_id uuid primary key references auth.users(id) on delete cascade
 );
 
 create table if not exists clients (
@@ -66,15 +75,22 @@ on conflict (name) do nothing;
 alter table categories enable row level security;
 alter table providers enable row level security;
 alter table clients enable row level security;
+alter table admins enable row level security;
 
--- Distingue al admin real (login con correo/contraseña) de una sesión
--- anónima (la que usan los proveedores solo para subir sus fotos).
+-- Distingue al admin real de cualquier otra cuenta autenticada (proveedor
+-- con login propio, sesión anónima, etc). SECURITY DEFINER: puede leer la
+-- tabla admins aunque quien llama no tenga permiso directo sobre ella.
 create or replace function public.is_admin()
 returns boolean
-language sql stable as $$
+language sql stable security definer set search_path = public as $$
   select auth.role() = 'authenticated'
-     and coalesce((auth.jwt() ->> 'is_anonymous')::boolean, false) = false;
+    and exists (select 1 from admins where user_id = auth.uid());
 $$;
+
+-- El frontend necesita poder preguntar "¿la sesión actual es admin?" sin
+-- exponer la tabla admins en sí (is_admin() solo revela sí/no de quien
+-- llama, nunca la lista completa).
+grant execute on function public.is_admin() to anon, authenticated;
 
 -- categories: lectura pública (para mostrar el formulario de registro),
 -- escritura solo para el admin real.
@@ -98,6 +114,64 @@ create policy "providers_select_admin" on providers
 
 create policy "providers_update_admin" on providers
   for update to authenticated using (is_admin()) with check (is_admin());
+
+-- El proveedor puede ver su propio registro (para su panel "Mi perfil").
+create policy "providers_select_own" on providers
+  for select to authenticated using (auth_user_id = auth.uid());
+
+-- El proveedor (o el admin) puede reemplazar UNA de sus 4 fotos sin poder
+-- tocar ningún otro campo (estado, aprobación, etc). El admin además puede
+-- borrar una foto (deja el campo vacío para pedir que la vuelvan a subir).
+create or replace function public.update_provider_photo(target_id uuid, photo_key text, new_path text)
+returns boolean
+language plpgsql security definer set search_path = public as $$
+declare
+  owner uuid;
+begin
+  select auth_user_id into owner from providers where id = target_id;
+  if owner is null or (owner != auth.uid() and not is_admin()) then
+    return false;
+  end if;
+  if photo_key = 'fotoPerfil' then
+    update providers set foto_perfil_path = new_path where id = target_id;
+  elsif photo_key = 'selfie' then
+    update providers set selfie_path = new_path where id = target_id;
+  elsif photo_key = 'fotoCedula' then
+    update providers set foto_cedula_path = new_path where id = target_id;
+  elsif photo_key = 'fotoCedulaReverso' then
+    update providers set foto_cedula_reverso_path = new_path where id = target_id;
+  else
+    return false;
+  end if;
+  return true;
+end;
+$$;
+
+grant execute on function public.update_provider_photo(uuid, text, text) to authenticated;
+
+create or replace function public.delete_provider_photo(target_id uuid, photo_key text)
+returns boolean
+language plpgsql security definer set search_path = public as $$
+begin
+  if not is_admin() then
+    return false;
+  end if;
+  if photo_key = 'fotoPerfil' then
+    update providers set foto_perfil_path = null where id = target_id;
+  elsif photo_key = 'selfie' then
+    update providers set selfie_path = null where id = target_id;
+  elsif photo_key = 'fotoCedula' then
+    update providers set foto_cedula_path = null where id = target_id;
+  elsif photo_key = 'fotoCedulaReverso' then
+    update providers set foto_cedula_reverso_path = null where id = target_id;
+  else
+    return false;
+  end if;
+  return true;
+end;
+$$;
+
+grant execute on function public.delete_provider_photo(uuid, text) to authenticated;
 
 -- Incrementa el contador de vistas del perfil sin dar permiso de escritura
 -- general sobre providers: corre con permisos del dueño de la función
@@ -150,3 +224,19 @@ create policy "provider_photos_select_own_or_admin" on storage.objects
     bucket_id = 'provider-photos'
     and (is_admin() or auth.uid()::text = (storage.foldername(name))[1])
   );
+
+-- El admin puede subir/reemplazar fotos en la carpeta de CUALQUIER
+-- proveedor (no solo la propia), y borrar objetos del bucket.
+create policy "provider_photos_insert_admin" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'provider-photos' and is_admin());
+
+create policy "provider_photos_delete_admin" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'provider-photos' and is_admin());
+
+-- ─────────────────────────────────────────────────────────
+-- ÚLTIMO PASO, MUY IMPORTANTE: agrega tu cuenta admin existente a la
+-- tabla admins (reemplaza el correo por el que usas para entrar al panel).
+-- ─────────────────────────────────────────────────────────
+-- insert into admins (user_id) select id from auth.users where email = 'tu-correo-admin@ejemplo.com';

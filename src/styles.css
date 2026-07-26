@@ -288,6 +288,13 @@ tr:last-child td{border-bottom:none;}
 .modal-photos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid var(--line);cursor:zoom-in;transition:opacity .15s;}
 .modal-photos img:hover{opacity:.85;}
 .modal-photos .ph-label{font-size:11px;color:var(--text-muted);margin-top:4px;text-align:center;}
+.ph-actions{display:flex;gap:4px;margin-top:5px;justify-content:center;}
+.ph-action-btn{
+  font-size:10.5px;font-weight:600;padding:4px 8px;border-radius:10px;cursor:pointer;
+  background:var(--teal-050);color:var(--teal-700);border:1px solid var(--teal-100);
+}
+.ph-action-btn input{display:none;}
+.ph-action-danger{background:var(--coral-100);color:#B23A20;border-color:var(--coral-100);}
 
 /* ---------- Lightbox ---------- */
 .lightbox-overlay{

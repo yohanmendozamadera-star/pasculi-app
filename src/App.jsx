@@ -11,8 +11,10 @@ import RegisterProvider from "./components/RegisterProvider.jsx";
 import ProviderSuccess from "./components/ProviderSuccess.jsx";
 import AdminLogin from "./components/admin/AdminLogin.jsx";
 import AdminPanel from "./components/admin/AdminPanel.jsx";
+import ProviderLogin from "./components/ProviderLogin.jsx";
+import ProviderDashboard from "./components/ProviderDashboard.jsx";
 import { StarIcon, ClipboardIcon } from "./components/Icons.jsx";
-import { getProviders, getClients, getCategories } from "./lib/storage.js";
+import { getProviders, getClients, getCategories, checkIsAdmin } from "./lib/storage.js";
 import { supabase } from "./lib/supabaseClient.js";
 
 // En celular, abrir la cámara (para la selfie o la foto de cédula) puede
@@ -54,20 +56,34 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Las sesiones anónimas (las que usan los proveedores solo para subir sus
-  // fotos) NO son admin: is_anonymous distingue una de otra. Solo cuando
-  // entra el admin real recargamos proveedores/clientes completos (RLS lo
-  // permite); hasta entonces solo se cargaron los proveedores aprobados.
-  const isAdmin = !!session && !session.user.is_anonymous;
+  // Las sesiones anónimas (las que usan los proveedores solo al subir sus
+  // fotos, antes de crear su cuenta real) nunca son admin. Para cualquier
+  // otra sesión real le preguntamos a Postgres si es LA cuenta admin (tabla
+  // admins) — un proveedor con su propio login real no debe colarse como
+  // admin solo por no ser anónimo.
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [roleChecked, setRoleChecked] = useState(false);
+  const isProviderSession = !!session && !session.user.is_anonymous && !isAdmin;
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!session || session.user.is_anonymous) {
+      setIsAdmin(false);
+      setRoleChecked(true);
+      return;
+    }
+    setRoleChecked(false);
     (async () => {
-      const [p, c] = await Promise.all([getProviders(), getClients()]);
-      setProviders(p);
-      setClients(c);
+      const admin = await checkIsAdmin();
+      setIsAdmin(admin);
+      setRoleChecked(true);
+      if (admin) {
+        const [p, c] = await Promise.all([getProviders(), getClients()]);
+        setProviders(p);
+        setClients(c);
+      }
     })();
-  }, [isAdmin]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id, session?.user?.is_anonymous]);
 
   const toast = useCallback((msg) => {
     setToastMsg(msg);
@@ -164,7 +180,9 @@ export default function App() {
         {view === "providerSuccess" && <ProviderSuccess provider={lastProvider} onNavigate={navigate} />}
 
         {view === "admin" &&
-          (isAdmin ? (
+          (!roleChecked ? (
+            <div className="empty-state">Verificando sesión…</div>
+          ) : isAdmin ? (
             <AdminPanel
               providers={providers}
               setProviders={setProviders}
@@ -176,6 +194,15 @@ export default function App() {
             />
           ) : (
             <AdminLogin toast={toast} />
+          ))}
+
+        {view === "providerDashboard" &&
+          (!roleChecked ? (
+            <div className="empty-state">Verificando sesión…</div>
+          ) : isProviderSession ? (
+            <ProviderDashboard toast={toast} />
+          ) : (
+            <ProviderLogin onNavigate={navigate} toast={toast} />
           ))}
       </main>
       <BottomNav view={view} onNavigate={navigate} />

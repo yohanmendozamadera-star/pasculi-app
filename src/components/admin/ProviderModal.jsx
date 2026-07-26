@@ -1,8 +1,40 @@
 import { useEffect, useState } from "react";
 import ImageLightbox from "./ImageLightbox.jsx";
+import { resizeImage } from "../../lib/image.js";
 
-export default function ProviderModal({ provider, photos, onClose, onApprove, onReject }) {
+const PHOTO_SLOTS = [
+  { key: "fotoPerfil", label: "Perfil" },
+  { key: "selfie", label: "Selfie" },
+  { key: "fotoCedula", label: "Cédula (frente)" },
+  { key: "fotoCedulaReverso", label: "Cédula (reverso)" },
+];
+
+export default function ProviderModal({ provider, photos, onClose, onApprove, onReject, onReplacePhoto, onDeletePhoto }) {
   const [lightbox, setLightbox] = useState(null);
+  const [busyKey, setBusyKey] = useState(null);
+
+  async function handleReplaceFile(key, e) {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    setBusyKey(key);
+    try {
+      const dataUrl = await resizeImage(file, 480, 0.6);
+      await onReplacePhoto(key, dataUrl);
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  async function handleDelete(key) {
+    if (!confirm("¿Borrar esta foto? El proveedor quedará con esa foto pendiente por subir de nuevo.")) return;
+    setBusyKey(key);
+    try {
+      await onDeletePhoto(key);
+    } finally {
+      setBusyKey(null);
+    }
+  }
 
   // Bloquea el scroll de fondo mientras el modal está abierto: en varios
   // navegadores móviles un modal position:fixed sobre una página que sigue
@@ -32,12 +64,7 @@ export default function ProviderModal({ provider, photos, onClose, onApprove, on
           Cédula {provider.identificacion} · {provider.celular}
         </p>
         <div className="modal-photos">
-          {[
-            { key: "fotoPerfil", label: "Perfil" },
-            { key: "selfie", label: "Selfie" },
-            { key: "fotoCedula", label: "Cédula (frente)" },
-            { key: "fotoCedulaReverso", label: "Cédula (reverso)" },
-          ].map(({ key, label }) => (
+          {PHOTO_SLOTS.map(({ key, label }) => (
             <div key={key}>
               <img
                 src={photos?.[key] || ""}
@@ -45,6 +72,27 @@ export default function ProviderModal({ provider, photos, onClose, onApprove, on
                 onClick={() => photos?.[key] && setLightbox({ src: photos[key], alt: label })}
               />
               <div className="ph-label">{label}</div>
+              <div className="ph-actions">
+                <label className="ph-action-btn">
+                  {busyKey === key ? "…" : "Reemplazar"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={busyKey === key}
+                    onChange={(e) => handleReplaceFile(key, e)}
+                  />
+                </label>
+                {photos?.[key] && (
+                  <button
+                    type="button"
+                    className="ph-action-btn ph-action-danger"
+                    disabled={busyKey === key}
+                    onClick={() => handleDelete(key)}
+                  >
+                    Borrar
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

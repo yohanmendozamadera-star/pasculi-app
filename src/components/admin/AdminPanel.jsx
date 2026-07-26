@@ -4,6 +4,9 @@ import { fmtDate } from "../../lib/image.js";
 import {
   updateProviderStatus,
   getProviderPhotoUrls,
+  replaceProviderPhoto,
+  deleteProviderPhoto,
+  PHOTO_PATH_COLUMN,
   addCategory as addCategoryApi,
   deleteCategory as deleteCategoryApi,
   setCategorySpecialties,
@@ -119,6 +122,34 @@ function ProvidersTab({ providers, setProviders, categories, toast }) {
     setModalPhotos(photos);
   }
 
+  function applyPathChange(photoKey, newPath) {
+    const column = PHOTO_PATH_COLUMN[photoKey];
+    setProviders((list) => list.map((p) => (p.id === modalProvider.id ? { ...p, [column]: newPath } : p)));
+    setModalProvider((prev) => (prev ? { ...prev, [column]: newPath } : prev));
+  }
+
+  async function handleReplacePhoto(photoKey, dataUrl) {
+    const newPath = await replaceProviderPhoto(modalProvider, photoKey, dataUrl);
+    if (!newPath) {
+      toast("No se pudo actualizar la foto.");
+      return;
+    }
+    applyPathChange(photoKey, newPath);
+    setModalPhotos((prev) => ({ ...prev, [photoKey]: dataUrl }));
+    toast("Foto actualizada.");
+  }
+
+  async function handleDeletePhoto(photoKey) {
+    const ok = await deleteProviderPhoto(modalProvider, photoKey);
+    if (!ok) {
+      toast("No se pudo borrar la foto.");
+      return;
+    }
+    applyPathChange(photoKey, null);
+    setModalPhotos((prev) => ({ ...prev, [photoKey]: null }));
+    toast("Foto borrada.");
+  }
+
   let list = [...providers].sort((a, b) => b.timestamp - a.timestamp);
   if (filters.ciudad) list = list.filter((p) => p.ciudad === filters.ciudad);
   if (filters.categoria) list = list.filter((p) => p.categoria === filters.categoria);
@@ -231,6 +262,8 @@ function ProvidersTab({ providers, setProviders, categories, toast }) {
         onClose={() => setModalProvider(null)}
         onApprove={(id) => updateStatus(id, "aprobado")}
         onReject={(id) => updateStatus(id, "rechazado")}
+        onReplacePhoto={handleReplacePhoto}
+        onDeletePhoto={handleDeletePhoto}
       />
     </>
   );

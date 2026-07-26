@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { CIUDADES } from "../data/categories.js";
 import { isValidEmail, isValidPhone, uid } from "../lib/image.js";
-import { insertProvider, uploadProviderPhotos } from "../lib/storage.js";
+import { insertProvider, uploadProviderPhotos, ensureAuthSession, finalizeProviderAccount } from "../lib/storage.js";
 import PhotoSlot from "./PhotoSlot.jsx";
 import { PinIcon } from "./Icons.jsx";
 
@@ -15,6 +15,8 @@ const EMPTY = {
   categoria: "",
   instagramUrl: "",
   tiktokUrl: "",
+  password: "",
+  confirmPassword: "",
 };
 
 const EMPTY_PHOTOS = { fotoPerfil: null, selfie: null, fotoCedula: null, fotoCedulaReverso: null };
@@ -107,6 +109,8 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
       categoria: !form.categoria,
       especialidades: especialidades.length === 0,
       fotos: !fotosOk,
+      password: form.password.length < 6,
+      confirmPassword: form.password !== form.confirmPassword,
     };
     setErrors(next);
     if (Object.values(next).some(Boolean)) {
@@ -115,6 +119,14 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
     }
     setSubmitting(true);
     const id = uid();
+
+    const session = await ensureAuthSession();
+    if (!session) {
+      setSubmitting(false);
+      toast("No se pudo iniciar tu registro, intenta de nuevo.");
+      return;
+    }
+
     const photoPaths = await uploadProviderPhotos(photos);
     if (!photoPaths) {
       setSubmitting(false);
@@ -122,10 +134,10 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
       return;
     }
 
-    const result = await insertProvider(id, form, especialidades, loc, photoPaths);
-    setSubmitting(false);
+    const result = await insertProvider(id, form, especialidades, loc, photoPaths, session.user.id);
 
     if (!result.ok) {
+      setSubmitting(false);
       if (result.reason === "duplicate") {
         toast("Ya existe un proveedor registrado con ese celular.");
       } else {
@@ -133,6 +145,9 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
       }
       return;
     }
+
+    await finalizeProviderAccount(form.correo, form.password);
+    setSubmitting(false);
 
     setProviders((list) => [result.provider, ...list]);
     setLastProvider({ ...result.provider, fotoPerfilPreview: photos.fotoPerfil });
@@ -152,8 +167,20 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
         <div className="form-header">
           <h2>Registro de proveedor</h2>
           <p>
-            Crea tu perfil de proveedor en Pasculi. Tu celular será tu usuario y quedará
-            pendiente de aprobación por el administrador.
+            Crea tu perfil de proveedor en Pasculi. Con tu correo y contraseña podrás
+            entrar después a ver el estado de tu perfil. Quedará pendiente de aprobación
+            por el administrador.
+          </p>
+          <p className="small-note">
+            ¿Ya te registraste antes?{" "}
+            <button
+              type="button"
+              className="btn-ghost"
+              style={{ padding: 0 }}
+              onClick={() => onNavigate("providerDashboard")}
+            >
+              Entra a ver tu perfil
+            </button>
           </p>
         </div>
         <form onSubmit={handleSubmit} noValidate>
@@ -191,7 +218,6 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
             <div className={`field-group ${errors.celular ? "has-error" : ""}`}>
               <label>
                 Celular <span className="req">*</span>
-                <span className="hint">Será tu usuario en Pasculi</span>
               </label>
               <input
                 type="tel"
@@ -229,6 +255,36 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
                 ))}
               </select>
               <span className="err-msg">Selecciona tu ciudad.</span>
+            </div>
+          </div>
+
+          <div className="field-row two">
+            <div className={`field-group ${errors.password ? "has-error" : ""}`}>
+              <label>
+                Contraseña <span className="req">*</span>
+                <span className="hint">Para entrar después a ver tu perfil</span>
+              </label>
+              <input
+                type="password"
+                placeholder="Mínimo 6 caracteres"
+                autoComplete="new-password"
+                value={form.password}
+                onChange={(e) => update("password", e.target.value)}
+              />
+              <span className="err-msg">Mínimo 6 caracteres.</span>
+            </div>
+            <div className={`field-group ${errors.confirmPassword ? "has-error" : ""}`}>
+              <label>
+                Confirmar contraseña <span className="req">*</span>
+              </label>
+              <input
+                type="password"
+                placeholder="Repite tu contraseña"
+                autoComplete="new-password"
+                value={form.confirmPassword}
+                onChange={(e) => update("confirmPassword", e.target.value)}
+              />
+              <span className="err-msg">Las contraseñas no coinciden.</span>
             </div>
           </div>
 
