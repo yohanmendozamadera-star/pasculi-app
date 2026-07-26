@@ -183,6 +183,7 @@ function ProvidersTab({ providers, setProviders, categories, toast }) {
                 <th>Celular</th>
                 <th>Ciudad</th>
                 <th>Categoría</th>
+                <th>Vistas</th>
                 <th>Estado</th>
                 <th>Fecha</th>
                 <th>Acciones</th>
@@ -197,6 +198,7 @@ function ProvidersTab({ providers, setProviders, categories, toast }) {
                   <td>
                     <span className="badge badge-cat">{p.categoria}</span>
                   </td>
+                  <td>{p.profileViews ?? 0}</td>
                   <td>
                     <span className={`status-pill status-${p.estado}`}>{p.estado.toUpperCase()}</span>
                   </td>

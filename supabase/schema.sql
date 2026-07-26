@@ -28,6 +28,10 @@ create table if not exists providers (
   foto_perfil_path text,
   selfie_path text,
   foto_cedula_path text,
+  foto_cedula_reverso_path text,
+  instagram_url text,
+  tiktok_url text,
+  profile_views integer not null default 0,
   created_at timestamptz not null default now()
 );
 
@@ -94,6 +98,22 @@ create policy "providers_select_admin" on providers
 
 create policy "providers_update_admin" on providers
   for update to authenticated using (is_admin()) with check (is_admin());
+
+-- Incrementa el contador de vistas del perfil sin dar permiso de escritura
+-- general sobre providers: corre con permisos del dueño de la función
+-- (SECURITY DEFINER), no del visitante anónimo que la llama.
+create or replace function public.increment_provider_views(target_id uuid)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update providers
+  set profile_views = profile_views + 1
+  where id = target_id and estado = 'aprobado';
+$$;
+
+grant execute on function public.increment_provider_views(uuid) to anon, authenticated;
 
 -- clients: cualquiera puede registrarse; solo el admin real los puede listar.
 create policy "clients_insert_public" on clients

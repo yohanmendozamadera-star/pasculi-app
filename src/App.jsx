@@ -4,6 +4,7 @@ import BottomNav from "./components/BottomNav.jsx";
 import Home from "./components/Home.jsx";
 import ClientOptions from "./components/ClientOptions.jsx";
 import BrowseProviders from "./components/BrowseProviders.jsx";
+import ProviderProfile from "./components/ProviderProfile.jsx";
 import ComingSoon from "./components/ComingSoon.jsx";
 import RegisterClient from "./components/RegisterClient.jsx";
 import RegisterProvider from "./components/RegisterProvider.jsx";
@@ -33,6 +34,7 @@ export default function App() {
   const [categories, setCategories] = useState({});
   const [session, setSession] = useState(null);
   const [lastProvider, setLastProvider] = useState(null);
+  const [selectedProvider, setSelectedProvider] = useState(null);
   const [toastMsg, setToastMsg] = useState("");
   const toastTimer = useRef(null);
 
@@ -112,8 +114,18 @@ export default function App() {
         {view === "clientOptions" && <ClientOptions onNavigate={navigate} />}
 
         {view === "browseProviders" && (
-          <BrowseProviders providers={providers} categories={categories} onNavigate={navigate} />
+          <BrowseProviders
+            providers={providers}
+            categories={categories}
+            onNavigate={navigate}
+            onOpenProfile={(p) => {
+              setSelectedProvider(p);
+              navigate("providerProfile");
+            }}
+          />
         )}
+
+        {view === "providerProfile" && <ProviderProfile provider={selectedProvider} onNavigate={navigate} />}
 
         {view === "topRated" && (
           <ComingSoon

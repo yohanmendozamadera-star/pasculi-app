@@ -1,4 +1,11 @@
-const CLIENT_VIEWS = ["clientOptions", "browseProviders", "topRated", "requestService", "registerClient"];
+const CLIENT_VIEWS = [
+  "clientOptions",
+  "browseProviders",
+  "providerProfile",
+  "topRated",
+  "requestService",
+  "registerClient",
+];
 
 const LINKS = [
   { view: "home", label: "Inicio" },

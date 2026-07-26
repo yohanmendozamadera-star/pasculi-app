@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ArrowLeftIcon, ClientIcon } from "./Icons.jsx";
 
-export default function BrowseProviders({ providers, categories, onNavigate }) {
+export default function BrowseProviders({ providers, categories, onNavigate, onOpenProfile }) {
   const [categoria, setCategoria] = useState(null);
 
   const aprobados = providers.filter((p) => p.estado === "aprobado");
@@ -55,7 +55,7 @@ export default function BrowseProviders({ providers, categories, onNavigate }) {
       ) : (
         <div className="provider-list">
           {list.map((p) => (
-            <div className="provider-card" key={p.id}>
+            <div className="provider-card provider-card-clickable" key={p.id} onClick={() => onOpenProfile(p)}>
               <div className="provider-avatar">
                 <ClientIcon width="20" height="20" />
               </div>
@@ -70,7 +70,13 @@ export default function BrowseProviders({ providers, categories, onNavigate }) {
                   ))}
                 </div>
               </div>
-              <button className="btn-secondary" onClick={() => onNavigate("registerClient")}>
+              <button
+                className="btn-secondary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNavigate("registerClient");
+                }}
+              >
                 Contactar
               </button>
             </div>

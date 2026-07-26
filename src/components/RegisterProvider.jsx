@@ -13,7 +13,11 @@ const EMPTY = {
   ciudad: "",
   direccion: "",
   categoria: "",
+  instagramUrl: "",
+  tiktokUrl: "",
 };
+
+const EMPTY_PHOTOS = { fotoPerfil: null, selfie: null, fotoCedula: null, fotoCedulaReverso: null };
 
 // En celular, abrir la cámara para la selfie o la foto de cédula puede
 // hacer que el navegador recargue la página al volver (por falta de
@@ -34,9 +38,7 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
   const draft = loadDraft();
   const [form, setForm] = useState(draft?.form || EMPTY);
   const [especialidades, setEspecialidades] = useState(draft?.especialidades || []);
-  const [photos, setPhotos] = useState(
-    draft?.photos || { fotoPerfil: null, selfie: null, fotoCedula: null }
-  );
+  const [photos, setPhotos] = useState(draft?.photos || EMPTY_PHOTOS);
   const [loc, setLoc] = useState(draft?.loc || null);
   const [locStatus, setLocStatus] = useState(
     draft?.loc
@@ -94,7 +96,7 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
 
   async function handleSubmit(e) {
     e.preventDefault();
-    const fotosOk = photos.fotoPerfil && photos.selfie && photos.fotoCedula;
+    const fotosOk = photos.fotoPerfil && photos.selfie && photos.fotoCedula && photos.fotoCedulaReverso;
     const next = {
       nombreCompleto: !form.nombreCompleto.trim(),
       identificacion: !form.identificacion.trim(),
@@ -136,7 +138,7 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
     setLastProvider({ ...result.provider, fotoPerfilPreview: photos.fotoPerfil });
     setForm(EMPTY);
     setEspecialidades([]);
-    setPhotos({ fotoPerfil: null, selfie: null, fotoCedula: null });
+    setPhotos(EMPTY_PHOTOS);
     setLoc(null);
     sessionStorage.removeItem(DRAFT_KEY);
     onNavigate("providerSuccess");
@@ -258,9 +260,17 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
               value={photos.fotoCedula}
               onChange={handlePhotoChange}
             />
+            <PhotoSlot
+              slotKey="fotoCedulaReverso"
+              title="Cédula (reverso)"
+              hint="Foto clara y legible"
+              capture="environment"
+              value={photos.fotoCedulaReverso}
+              onChange={handlePhotoChange}
+            />
           </div>
           <div className={`field-group ${errors.fotos ? "has-error" : ""}`} style={{ marginTop: 10 }}>
-            <span className="err-msg">Debes cargar las 3 fotos: perfil, selfie y cédula.</span>
+            <span className="err-msg">Debes cargar las 4 fotos: perfil, selfie y cédula (frente y reverso).</span>
           </div>
 
           <div className="section-divider">
@@ -330,6 +340,35 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
             <PinIcon width="16" height="16" /> Usar mi ubicación actual
           </button>
           <div className="loc-status">{locStatus}</div>
+
+          <div className="section-divider">
+            <span className="num">5</span>
+            <h4>Redes sociales</h4>
+          </div>
+          <div className="field-row two">
+            <div className="field-group">
+              <label>
+                Instagram <span className="hint">Opcional</span>
+              </label>
+              <input
+                type="url"
+                placeholder="https://instagram.com/tu_usuario"
+                value={form.instagramUrl}
+                onChange={(e) => update("instagramUrl", e.target.value)}
+              />
+            </div>
+            <div className="field-group">
+              <label>
+                TikTok <span className="hint">Opcional</span>
+              </label>
+              <input
+                type="url"
+                placeholder="https://tiktok.com/@tu_usuario"
+                value={form.tiktokUrl}
+                onChange={(e) => update("tiktokUrl", e.target.value)}
+              />
+            </div>
+          </div>
 
           <div style={{ marginTop: 26 }}>
             <button type="submit" className="btn-primary" disabled={submitting}>

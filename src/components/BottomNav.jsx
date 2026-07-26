@@ -1,6 +1,13 @@
 import { HomeIcon, ClientIcon, ProviderIcon, ShieldIcon } from "./Icons.jsx";
 
-const CLIENT_VIEWS = ["clientOptions", "browseProviders", "topRated", "requestService", "registerClient"];
+const CLIENT_VIEWS = [
+  "clientOptions",
+  "browseProviders",
+  "providerProfile",
+  "topRated",
+  "requestService",
+  "registerClient",
+];
 
 const TABS = [
   { view: "home", label: "Inicio", Icon: HomeIcon },

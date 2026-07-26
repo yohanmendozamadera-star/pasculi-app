@@ -24,6 +24,10 @@ function providerFromRow(row) {
     fotoPerfilPath: row.foto_perfil_path,
     selfiePath: row.selfie_path,
     fotoCedulaPath: row.foto_cedula_path,
+    fotoCedulaReversoPath: row.foto_cedula_reverso_path,
+    instagramUrl: row.instagram_url,
+    tiktokUrl: row.tiktok_url,
+    profileViews: row.profile_views,
   };
 }
 
@@ -73,6 +77,9 @@ export async function insertProvider(id, form, especialidades, ubicacion, photoP
     foto_perfil_path: photoPaths.fotoPerfil,
     selfie_path: photoPaths.selfie,
     foto_cedula_path: photoPaths.fotoCedula,
+    foto_cedula_reverso_path: photoPaths.fotoCedulaReverso,
+    instagram_url: form.instagramUrl || null,
+    tiktok_url: form.tiktokUrl || null,
   });
 
   if (error) {
@@ -98,6 +105,10 @@ export async function insertProvider(id, form, especialidades, ubicacion, photoP
       fotoPerfilPath: photoPaths.fotoPerfil,
       selfiePath: photoPaths.selfie,
       fotoCedulaPath: photoPaths.fotoCedula,
+      fotoCedulaReversoPath: photoPaths.fotoCedulaReverso,
+      instagramUrl: form.instagramUrl || null,
+      tiktokUrl: form.tiktokUrl || null,
+      profileViews: 0,
     },
   };
 }
@@ -141,6 +152,7 @@ export async function uploadProviderPhotos(photos) {
     ["fotoPerfil", photos.fotoPerfil],
     ["selfie", photos.selfie],
     ["fotoCedula", photos.fotoCedula],
+    ["fotoCedulaReverso", photos.fotoCedulaReverso],
   ];
   const paths = {};
   for (const [key, dataUrl] of entries) {
@@ -158,22 +170,37 @@ export async function uploadProviderPhotos(photos) {
   return paths;
 }
 
-// Genera URLs firmadas temporales para que el admin vea las 3 fotos de un proveedor.
+// Genera URLs firmadas temporales para que el admin vea las 4 fotos de un proveedor.
 export async function getProviderPhotoUrls(provider) {
-  const paths = [provider.fotoPerfilPath, provider.selfiePath, provider.fotoCedulaPath].filter(Boolean);
-  if (paths.length === 0) return { fotoPerfil: null, selfie: null, fotoCedula: null };
+  const empty = { fotoPerfil: null, selfie: null, fotoCedula: null, fotoCedulaReverso: null };
+  const paths = [
+    provider.fotoPerfilPath,
+    provider.selfiePath,
+    provider.fotoCedulaPath,
+    provider.fotoCedulaReversoPath,
+  ].filter(Boolean);
+  if (paths.length === 0) return empty;
 
   const { data, error } = await supabase.storage.from(PHOTOS_BUCKET).createSignedUrls(paths, 300);
   if (error) {
     console.error("No se pudieron generar las URLs de las fotos", error);
-    return { fotoPerfil: null, selfie: null, fotoCedula: null };
+    return empty;
   }
   const byPath = Object.fromEntries(data.map((d) => [d.path, d.signedUrl]));
   return {
     fotoPerfil: byPath[provider.fotoPerfilPath] || null,
     selfie: byPath[provider.selfiePath] || null,
     fotoCedula: byPath[provider.fotoCedulaPath] || null,
+    fotoCedulaReverso: byPath[provider.fotoCedulaReversoPath] || null,
   };
+}
+
+// Suma una vista al perfil público de un proveedor (RPC segura, ver schema.sql).
+export async function incrementProviderViews(providerId) {
+  const { error } = await supabase.rpc("increment_provider_views", { target_id: providerId });
+  if (error) {
+    console.error("No se pudo registrar la vista del perfil", error);
+  }
 }
 
 // ── Clientes ─────────────────────────────────────────────
