@@ -30,7 +30,7 @@ export default function Home({ providers, categories, onNavigate }) {
           <p>Regístrate en segundos y encuentra proveedores verificados para lo que necesites.</p>
           <span className="cta-arrow">Registrarme como cliente →</span>
         </button>
-        <button className="cta-card" onClick={() => onNavigate("registerProvider")}>
+        <button className="cta-card" onClick={() => onNavigate("providerOptions")}>
           <div className="cta-icon mango">
             <ProviderIcon width="22" height="22" />
           </div>

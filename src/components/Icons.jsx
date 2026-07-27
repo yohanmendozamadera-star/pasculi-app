@@ -77,6 +77,31 @@ export function ArrowLeftIcon(props) {
     </svg>
   );
 }
+export function PlayIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M10 8.5l6 3.5-6 3.5z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+export function EyeIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+export function EyeOffIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+      <path d="M3 3l18 18" />
+      <path d="M10.6 5.2A10.8 10.8 0 0112 5c6.5 0 10 7 10 7a17.8 17.8 0 01-3.4 4.3M6.6 6.6C4 8.3 2 12 2 12s3.5 7 10 7c1.3 0 2.5-.2 3.6-.6" />
+      <path d="M9.9 9.9a3 3 0 004.2 4.2" />
+    </svg>
+  );
+}
 export function ChatIcon(props) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>

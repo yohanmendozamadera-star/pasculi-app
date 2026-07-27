@@ -3,6 +3,7 @@ import Header from "./components/Header.jsx";
 import BottomNav from "./components/BottomNav.jsx";
 import Home from "./components/Home.jsx";
 import ClientOptions from "./components/ClientOptions.jsx";
+import ProviderOptions from "./components/ProviderOptions.jsx";
 import BrowseProviders from "./components/BrowseProviders.jsx";
 import ProviderProfile from "./components/ProviderProfile.jsx";
 import ComingSoon from "./components/ComingSoon.jsx";
@@ -129,6 +130,8 @@ export default function App() {
 
         {view === "clientOptions" && <ClientOptions onNavigate={navigate} />}
 
+        {view === "providerOptions" && <ProviderOptions onNavigate={navigate} />}
+
         {view === "browseProviders" && (
           <BrowseProviders
             providers={providers}
@@ -200,7 +203,7 @@ export default function App() {
           (!roleChecked ? (
             <div className="empty-state">Verificando sesión…</div>
           ) : isProviderSession ? (
-            <ProviderDashboard toast={toast} />
+            <ProviderDashboard categories={categories} toast={toast} />
           ) : (
             <ProviderLogin onNavigate={navigate} toast={toast} />
           ))}

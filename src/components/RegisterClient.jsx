@@ -1,17 +1,42 @@
 import { useState } from "react";
-import { CIUDADES } from "../data/categories.js";
 import { isValidEmail, isValidPhone } from "../lib/image.js";
 import { insertClient } from "../lib/storage.js";
+import PolicyCheckbox from "./PolicyCheckbox.jsx";
+import { PinIcon } from "./Icons.jsx";
 
 const EMPTY = { nombreCompleto: "", celular: "", correo: "", ciudad: "" };
 
 export default function RegisterClient({ setClients, onNavigate, toast }) {
   const [form, setForm] = useState(EMPTY);
+  const [loc, setLoc] = useState(null);
+  const [locStatus, setLocStatus] = useState(
+    "No se ha capturado la ubicación (opcional, ayuda a encontrarte proveedores cerca)."
+  );
+  const [acceptedPolicy, setAcceptedPolicy] = useState(false);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
+  }
+
+  function captureLocation() {
+    if (!navigator.geolocation) {
+      setLocStatus("Tu navegador no permite compartir ubicación.");
+      return;
+    }
+    setLocStatus("Obteniendo ubicación…");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const next = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setLoc(next);
+        setLocStatus(`Ubicación capturada: ${next.lat.toFixed(5)}, ${next.lng.toFixed(5)}`);
+      },
+      () => {
+        setLocStatus("No se pudo obtener tu ubicación. Puedes continuar sin ella.");
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
   }
 
   async function handleSubmit(e) {
@@ -20,7 +45,8 @@ export default function RegisterClient({ setClients, onNavigate, toast }) {
       nombreCompleto: !form.nombreCompleto.trim(),
       celular: !isValidPhone(form.celular),
       correo: !isValidEmail(form.correo),
-      ciudad: !form.ciudad,
+      ciudad: !form.ciudad.trim(),
+      policy: !acceptedPolicy,
     };
     setErrors(next);
     if (Object.values(next).some(Boolean)) {
@@ -28,12 +54,13 @@ export default function RegisterClient({ setClients, onNavigate, toast }) {
       return;
     }
     setSubmitting(true);
-    const result = await insertClient(form);
+    const result = await insertClient(form, loc);
     setSubmitting(false);
     if (result.ok) {
       setClients((list) => [result.client, ...list]);
       toast("¡Registro de cliente exitoso!");
       setForm(EMPTY);
+      setLoc(null);
       onNavigate("home");
     } else if (result.reason === "duplicate") {
       toast("Ya existe un cliente registrado con ese celular.");
@@ -95,15 +122,22 @@ export default function RegisterClient({ setClients, onNavigate, toast }) {
             <label>
               Ciudad <span className="req">*</span>
             </label>
-            <select value={form.ciudad} onChange={(e) => update("ciudad", e.target.value)}>
-              <option value="">Selecciona tu ciudad</option>
-              {CIUDADES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-            <span className="err-msg">Selecciona tu ciudad.</span>
+            <input
+              type="text"
+              placeholder="Escribe tu ciudad"
+              value={form.ciudad}
+              onChange={(e) => update("ciudad", e.target.value)}
+            />
+            <span className="err-msg">Ingresa tu ciudad.</span>
+          </div>
+
+          <button type="button" className="loc-btn" onClick={captureLocation}>
+            <PinIcon width="16" height="16" /> Usar mi ubicación actual
+          </button>
+          <div className="loc-status">{locStatus}</div>
+
+          <div style={{ marginTop: 18 }}>
+            <PolicyCheckbox checked={acceptedPolicy} onChange={setAcceptedPolicy} error={errors.policy} />
           </div>
 
           <button type="submit" className="btn-primary" disabled={submitting}>

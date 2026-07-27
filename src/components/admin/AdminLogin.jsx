@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ShieldIcon } from "../Icons.jsx";
 import { supabase } from "../../lib/supabaseClient.js";
+import PasswordInput from "../PasswordInput.jsx";
 
 export default function AdminLogin({ toast }) {
   const [email, setEmail] = useState("");
@@ -35,14 +36,14 @@ export default function AdminLogin({ toast }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <input
-          type="password"
-          placeholder="Contraseña"
-          style={{ textAlign: "center", marginBottom: 12 }}
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div style={{ marginBottom: 12 }}>
+          <PasswordInput
+            placeholder="Contraseña"
+            autoComplete="current-password"
+            value={password}
+            onChange={setPassword}
+          />
+        </div>
         <button type="submit" className="btn-primary" disabled={submitting}>
           {submitting ? "Entrando…" : "Entrar al panel"}
         </button>

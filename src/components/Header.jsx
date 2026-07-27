@@ -7,10 +7,12 @@ const CLIENT_VIEWS = [
   "registerClient",
 ];
 
+const PROVIDER_VIEWS = ["providerOptions", "registerProvider", "providerDashboard"];
+
 const LINKS = [
   { view: "home", label: "Inicio" },
   { view: "clientOptions", label: "Soy cliente" },
-  { view: "registerProvider", label: "Registro proveedor" },
+  { view: "providerOptions", label: "Soy proveedor" },
   { view: "admin", label: "Administrador" },
 ];
 
@@ -22,17 +24,16 @@ export default function Header({ view, onNavigate }) {
         <span className="logo-word">Pasculi</span>
       </button>
       <nav className="nav-desktop">
-        {LINKS.map((l) => (
-          <button
-            key={l.view}
-            className={
-              l.view === "clientOptions" ? (CLIENT_VIEWS.includes(view) ? "active" : "") : view === l.view ? "active" : ""
-            }
-            onClick={() => onNavigate(l.view)}
-          >
-            {l.label}
-          </button>
-        ))}
+        {LINKS.map((l) => {
+          let active = view === l.view;
+          if (l.view === "clientOptions") active = CLIENT_VIEWS.includes(view);
+          if (l.view === "providerOptions") active = PROVIDER_VIEWS.includes(view);
+          return (
+            <button key={l.view} className={active ? "active" : ""} onClick={() => onNavigate(l.view)}>
+              {l.label}
+            </button>
+          );
+        })}
       </nav>
     </div>
   );

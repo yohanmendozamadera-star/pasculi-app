@@ -1,10 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeftIcon, ClientIcon } from "./Icons.jsx";
+import { getProviderAvatarUrls } from "../lib/storage.js";
 
 export default function BrowseProviders({ providers, categories, onNavigate, onOpenProfile }) {
   const [categoria, setCategoria] = useState(null);
+  const [avatars, setAvatars] = useState({});
 
   const aprobados = providers.filter((p) => p.estado === "aprobado");
+  const list = categoria ? aprobados.filter((p) => p.categoria === categoria) : [];
+
+  useEffect(() => {
+    if (list.length === 0) return;
+    getProviderAvatarUrls(list).then((urls) => setAvatars((prev) => ({ ...prev, ...urls })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoria]);
 
   if (!categoria) {
     return (
@@ -32,8 +41,6 @@ export default function BrowseProviders({ providers, categories, onNavigate, onO
     );
   }
 
-  const list = aprobados.filter((p) => p.categoria === categoria);
-
   return (
     <div style={{ padding: 0 }}>
       <button className="back-link" onClick={() => setCategoria(null)}>
@@ -56,9 +63,13 @@ export default function BrowseProviders({ providers, categories, onNavigate, onO
         <div className="provider-list">
           {list.map((p) => (
             <div className="provider-card provider-card-clickable" key={p.id} onClick={() => onOpenProfile(p)}>
-              <div className="provider-avatar">
-                <ClientIcon width="20" height="20" />
-              </div>
+              {avatars[p.id] ? (
+                <img className="provider-avatar-photo" src={avatars[p.id]} alt={p.nombreCompleto} />
+              ) : (
+                <div className="provider-avatar">
+                  <ClientIcon width="20" height="20" />
+                </div>
+              )}
               <div className="provider-info">
                 <h4>{p.nombreCompleto}</h4>
                 <p className="provider-meta">{p.ciudad}</p>

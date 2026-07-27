@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getMyProviderProfile, getProviderPhotoUrls, replaceProviderPhoto } from "../lib/storage.js";
+import { getMyProviderProfile, getProviderPhotoUrls, replaceProviderPhoto, updateProviderProfile } from "../lib/storage.js";
 import { supabase } from "../lib/supabaseClient.js";
 import PhotoSlot from "./PhotoSlot.jsx";
 
@@ -8,13 +8,19 @@ const PHOTO_SLOTS = [
   { key: "selfie", title: "Selfie", hint: "Toma la foto en el momento", capture: "user" },
   { key: "fotoCedula", title: "Cédula (frente)", hint: "Foto clara y legible", capture: "environment" },
   { key: "fotoCedulaReverso", title: "Cédula (reverso)", hint: "Foto clara y legible", capture: "environment" },
+  { key: "trabajo1", title: "Trabajo 1", hint: "Opcional" },
+  { key: "trabajo2", title: "Trabajo 2", hint: "Opcional" },
+  { key: "trabajo3", title: "Trabajo 3", hint: "Opcional" },
 ];
 
-export default function ProviderDashboard({ toast }) {
+export default function ProviderDashboard({ categories, toast }) {
   const [profile, setProfile] = useState(null);
   const [photos, setPhotos] = useState(null);
   const [loading, setLoading] = useState(true);
   const [uploadingKey, setUploadingKey] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   async function load() {
     const p = await getMyProviderProfile();
@@ -40,6 +46,39 @@ export default function ProviderDashboard({ toast }) {
     }
   }
 
+  function startEditing() {
+    setForm({
+      nombreCompleto: profile.nombreCompleto,
+      celular: profile.celular,
+      direccion: profile.direccion,
+      especialidades: profile.especialidades || [],
+    });
+    setEditing(true);
+  }
+
+  function toggleEspecialidad(sp) {
+    setForm((f) => ({
+      ...f,
+      especialidades: f.especialidades.includes(sp)
+        ? f.especialidades.filter((x) => x !== sp)
+        : [...f.especialidades, sp],
+    }));
+  }
+
+  async function saveEdits(e) {
+    e.preventDefault();
+    setSaving(true);
+    const ok = await updateProviderProfile(profile.id, form);
+    setSaving(false);
+    if (ok) {
+      toast("Perfil actualizado.");
+      setEditing(false);
+      load();
+    } else {
+      toast("No se pudo guardar, intenta de nuevo.");
+    }
+  }
+
   if (loading) {
     return <div className="empty-state">Cargando tu perfil…</div>;
   }
@@ -52,6 +91,8 @@ export default function ProviderDashboard({ toast }) {
       </div>
     );
   }
+
+  const specialtyList = categories?.[profile.categoria] || [];
 
   return (
     <div className="wrap-narrow" style={{ padding: 0 }}>
@@ -79,20 +120,85 @@ export default function ProviderDashboard({ toast }) {
           </div>
         </div>
 
-        <div className="chip-select" style={{ marginBottom: 18 }}>
-          <span className="badge badge-cat">{profile.categoria}</span>
-          {(profile.especialidades || []).map((sp) => (
-            <span key={sp} className="chip-option checked">
-              {sp}
-            </span>
-          ))}
-        </div>
+        {!editing ? (
+          <>
+            <div className="chip-select" style={{ marginBottom: 10 }}>
+              <span className="badge badge-cat">{profile.categoria}</span>
+              {(profile.especialidades || []).map((sp) => (
+                <span key={sp} className="chip-option checked">
+                  {sp}
+                </span>
+              ))}
+            </div>
+            <p className="small-note" style={{ marginTop: -4 }}>
+              Celular {profile.celular} · {profile.direccion}
+            </p>
+            <button className="btn-secondary" style={{ marginTop: 10 }} onClick={startEditing}>
+              Editar mis datos
+            </button>
+          </>
+        ) : (
+          <form onSubmit={saveEdits} style={{ marginBottom: 18 }}>
+            <div className="field-group">
+              <label>Nombre completo</label>
+              <input
+                type="text"
+                value={form.nombreCompleto}
+                onChange={(e) => setForm((f) => ({ ...f, nombreCompleto: e.target.value }))}
+              />
+            </div>
+            <div className="field-row two">
+              <div className="field-group">
+                <label>Celular</label>
+                <input
+                  type="tel"
+                  value={form.celular}
+                  onChange={(e) => setForm((f) => ({ ...f, celular: e.target.value }))}
+                />
+              </div>
+              <div className="field-group">
+                <label>Dirección</label>
+                <input
+                  type="text"
+                  value={form.direccion}
+                  onChange={(e) => setForm((f) => ({ ...f, direccion: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="field-group">
+              <label>
+                Especialidades <span className="hint">{profile.categoria}</span>
+              </label>
+              <div className="chip-select">
+                {specialtyList.map((sp) => (
+                  <label key={sp} className={`chip-option ${form.especialidades.includes(sp) ? "checked" : ""}`}>
+                    <input
+                      type="checkbox"
+                      checked={form.especialidades.includes(sp)}
+                      onChange={() => toggleEspecialidad(sp)}
+                    />
+                    {sp}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+              <button type="submit" className="btn-primary" disabled={saving}>
+                {saving ? "Guardando…" : "Guardar cambios"}
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => setEditing(false)}>
+                Cancelar
+              </button>
+            </div>
+          </form>
+        )}
 
         <h3 className="section-title" style={{ fontSize: 15 }}>
-          Tus fotos de verificación
+          Tus fotos
         </h3>
         <p className="small-note" style={{ marginTop: -8, marginBottom: 12 }}>
-          Si el administrador te pidió corregir una foto borrosa, cámbiala aquí.
+          Perfil, verificación y hasta 3 fotos de trabajos. Si el admin te pidió corregir una foto
+          borrosa, cámbiala aquí.
         </p>
         <div className="photo-grid">
           {PHOTO_SLOTS.map(({ key, title, hint, capture }) => (

@@ -7,6 +7,9 @@ const PHOTO_SLOTS = [
   { key: "selfie", label: "Selfie" },
   { key: "fotoCedula", label: "Cédula (frente)" },
   { key: "fotoCedulaReverso", label: "Cédula (reverso)" },
+  { key: "trabajo1", label: "Trabajo 1" },
+  { key: "trabajo2", label: "Trabajo 2" },
+  { key: "trabajo3", label: "Trabajo 3" },
 ];
 
 export default function ProviderModal({ provider, photos, onClose, onApprove, onReject, onReplacePhoto, onDeletePhoto }) {
@@ -127,19 +130,15 @@ export default function ProviderModal({ provider, photos, onClose, onApprove, on
               <td style={{ textAlign: "right" }}>{(provider.especialidades || []).join(", ")}</td>
             </tr>
             <tr>
-              <td style={{ color: "var(--text-muted)", padding: "6px 0" }}>Redes sociales</td>
+              <td style={{ color: "var(--text-muted)", padding: "6px 0" }}>Video de YouTube</td>
               <td style={{ textAlign: "right" }}>
-                {provider.instagramUrl && (
-                  <a href={provider.instagramUrl} target="_blank" rel="noreferrer" style={{ marginLeft: 10 }}>
-                    Instagram
+                {provider.youtubeUrl ? (
+                  <a href={provider.youtubeUrl} target="_blank" rel="noreferrer">
+                    Ver video
                   </a>
+                ) : (
+                  "Sin registrar"
                 )}
-                {provider.tiktokUrl && (
-                  <a href={provider.tiktokUrl} target="_blank" rel="noreferrer" style={{ marginLeft: 10 }}>
-                    TikTok
-                  </a>
-                )}
-                {!provider.instagramUrl && !provider.tiktokUrl && "Sin registrar"}
               </td>
             </tr>
             <tr>

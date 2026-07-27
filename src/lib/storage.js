@@ -25,8 +25,10 @@ function providerFromRow(row) {
     selfiePath: row.selfie_path,
     fotoCedulaPath: row.foto_cedula_path,
     fotoCedulaReversoPath: row.foto_cedula_reverso_path,
-    instagramUrl: row.instagram_url,
-    tiktokUrl: row.tiktok_url,
+    trabajo1Path: row.trabajo1_path,
+    trabajo2Path: row.trabajo2_path,
+    trabajo3Path: row.trabajo3_path,
+    youtubeUrl: row.youtube_url,
     profileViews: row.profile_views,
     authUserId: row.auth_user_id,
   };
@@ -80,8 +82,10 @@ export async function insertProvider(id, form, especialidades, ubicacion, photoP
     selfie_path: photoPaths.selfie,
     foto_cedula_path: photoPaths.fotoCedula,
     foto_cedula_reverso_path: photoPaths.fotoCedulaReverso,
-    instagram_url: form.instagramUrl || null,
-    tiktok_url: form.tiktokUrl || null,
+    trabajo1_path: photoPaths.trabajo1 || null,
+    trabajo2_path: photoPaths.trabajo2 || null,
+    trabajo3_path: photoPaths.trabajo3 || null,
+    youtube_url: form.youtubeUrl || null,
   });
 
   if (error) {
@@ -109,8 +113,10 @@ export async function insertProvider(id, form, especialidades, ubicacion, photoP
       selfiePath: photoPaths.selfie,
       fotoCedulaPath: photoPaths.fotoCedula,
       fotoCedulaReversoPath: photoPaths.fotoCedulaReverso,
-      instagramUrl: form.instagramUrl || null,
-      tiktokUrl: form.tiktokUrl || null,
+      trabajo1Path: photoPaths.trabajo1 || null,
+      trabajo2Path: photoPaths.trabajo2 || null,
+      trabajo3Path: photoPaths.trabajo3 || null,
+      youtubeUrl: form.youtubeUrl || null,
       profileViews: 0,
     },
   };
@@ -196,6 +202,9 @@ export const PHOTO_PATH_COLUMN = {
   selfie: "selfiePath",
   fotoCedula: "fotoCedulaPath",
   fotoCedulaReverso: "fotoCedulaReversoPath",
+  trabajo1: "trabajo1Path",
+  trabajo2: "trabajo2Path",
+  trabajo3: "trabajo3Path",
 };
 
 // Reemplaza UNA foto de un proveedor (la usa tanto el propio proveedor
@@ -257,14 +266,26 @@ export async function getMyProviderProfile() {
   return data?.[0] ? providerFromRow(data[0]) : null;
 }
 
-// Genera URLs firmadas temporales para que el admin vea las 4 fotos de un proveedor.
+// Genera URLs firmadas temporales para que el admin (o el propio proveedor)
+// vean las 7 fotos de un proveedor: las 4 de verificación y las 3 de trabajos.
 export async function getProviderPhotoUrls(provider) {
-  const empty = { fotoPerfil: null, selfie: null, fotoCedula: null, fotoCedulaReverso: null };
+  const empty = {
+    fotoPerfil: null,
+    selfie: null,
+    fotoCedula: null,
+    fotoCedulaReverso: null,
+    trabajo1: null,
+    trabajo2: null,
+    trabajo3: null,
+  };
   const paths = [
     provider.fotoPerfilPath,
     provider.selfiePath,
     provider.fotoCedulaPath,
     provider.fotoCedulaReversoPath,
+    provider.trabajo1Path,
+    provider.trabajo2Path,
+    provider.trabajo3Path,
   ].filter(Boolean);
   if (paths.length === 0) return empty;
 
@@ -279,7 +300,68 @@ export async function getProviderPhotoUrls(provider) {
     selfie: byPath[provider.selfiePath] || null,
     fotoCedula: byPath[provider.fotoCedulaPath] || null,
     fotoCedulaReverso: byPath[provider.fotoCedulaReversoPath] || null,
+    trabajo1: byPath[provider.trabajo1Path] || null,
+    trabajo2: byPath[provider.trabajo2Path] || null,
+    trabajo3: byPath[provider.trabajo3Path] || null,
   };
+}
+
+// URLs firmadas de la "vitrina pública" (foto de perfil + trabajos) de un
+// proveedor APROBADO — cualquiera puede pedirlas, sin login (RLS lo permite
+// solo para esas fotos puntuales de proveedores aprobados; selfie y cédula
+// siguen totalmente privadas).
+export async function getProviderShowcasePhotos(provider) {
+  const empty = { fotoPerfil: null, trabajo1: null, trabajo2: null, trabajo3: null };
+  const paths = [provider.fotoPerfilPath, provider.trabajo1Path, provider.trabajo2Path, provider.trabajo3Path].filter(
+    Boolean
+  );
+  if (paths.length === 0) return empty;
+
+  const { data, error } = await supabase.storage.from(PHOTOS_BUCKET).createSignedUrls(paths, 3600);
+  if (error) {
+    console.error("No se pudieron generar las URLs públicas de las fotos", error);
+    return empty;
+  }
+  const byPath = Object.fromEntries(data.map((d) => [d.path, d.signedUrl]));
+  return {
+    fotoPerfil: byPath[provider.fotoPerfilPath] || null,
+    trabajo1: byPath[provider.trabajo1Path] || null,
+    trabajo2: byPath[provider.trabajo2Path] || null,
+    trabajo3: byPath[provider.trabajo3Path] || null,
+  };
+}
+
+// Foto de perfil (solo esa, en lote) para tarjetas de una lista de
+// proveedores aprobados — misma política pública que getProviderShowcasePhotos.
+export async function getProviderAvatarUrls(providers) {
+  const paths = providers.map((p) => p.fotoPerfilPath).filter(Boolean);
+  if (paths.length === 0) return {};
+
+  const { data, error } = await supabase.storage.from(PHOTOS_BUCKET).createSignedUrls(paths, 3600);
+  if (error) {
+    console.error("No se pudieron generar las URLs de las fotos de perfil", error);
+    return {};
+  }
+  const byPath = Object.fromEntries(data.map((d) => [d.path, d.signedUrl]));
+  return Object.fromEntries(
+    providers.filter((p) => p.fotoPerfilPath).map((p) => [p.id, byPath[p.fotoPerfilPath] || null])
+  );
+}
+
+// El proveedor edita sus propios datos básicos (RPC segura, ver schema.sql).
+export async function updateProviderProfile(providerId, { nombreCompleto, celular, direccion, especialidades }) {
+  const { data, error } = await supabase.rpc("update_provider_profile", {
+    target_id: providerId,
+    new_nombre: nombreCompleto,
+    new_celular: celular,
+    new_direccion: direccion,
+    new_especialidades: especialidades,
+  });
+  if (error || !data) {
+    console.error("No se pudo actualizar tu perfil", error);
+    return false;
+  }
+  return true;
 }
 
 // Suma una vista al perfil público de un proveedor (RPC segura, ver schema.sql).
@@ -315,7 +397,7 @@ export async function getClients() {
   return data.map(clientFromRow);
 }
 
-export async function insertClient(form) {
+export async function insertClient(form, ubicacion) {
   const id = uid();
   const { error } = await supabase.from("clients").insert({
     id,
@@ -323,6 +405,7 @@ export async function insertClient(form) {
     celular: form.celular,
     correo: form.correo,
     ciudad: form.ciudad,
+    ubicacion,
   });
 
   if (error) {
@@ -338,6 +421,7 @@ export async function insertClient(form) {
       celular: form.celular,
       correo: form.correo,
       ciudad: form.ciudad,
+      ubicacion,
       timestamp: new Date().toISOString(),
     },
   };

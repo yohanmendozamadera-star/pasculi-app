@@ -3,6 +3,8 @@ import { CIUDADES } from "../data/categories.js";
 import { isValidEmail, isValidPhone, uid } from "../lib/image.js";
 import { insertProvider, uploadProviderPhotos, ensureAuthSession, finalizeProviderAccount } from "../lib/storage.js";
 import PhotoSlot from "./PhotoSlot.jsx";
+import PolicyCheckbox from "./PolicyCheckbox.jsx";
+import PasswordInput from "./PasswordInput.jsx";
 import { PinIcon } from "./Icons.jsx";
 
 const EMPTY = {
@@ -13,13 +15,20 @@ const EMPTY = {
   ciudad: "",
   direccion: "",
   categoria: "",
-  instagramUrl: "",
-  tiktokUrl: "",
+  youtubeUrl: "",
   password: "",
   confirmPassword: "",
 };
 
-const EMPTY_PHOTOS = { fotoPerfil: null, selfie: null, fotoCedula: null, fotoCedulaReverso: null };
+const EMPTY_PHOTOS = {
+  fotoPerfil: null,
+  selfie: null,
+  fotoCedula: null,
+  fotoCedulaReverso: null,
+  trabajo1: null,
+  trabajo2: null,
+  trabajo3: null,
+};
 
 // En celular, abrir la cámara para la selfie o la foto de cédula puede
 // hacer que el navegador recargue la página al volver (por falta de
@@ -47,16 +56,17 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
       ? `Ubicación capturada: ${draft.loc.lat.toFixed(5)}, ${draft.loc.lng.toFixed(5)}`
       : "No se ha capturado la ubicación (opcional, ayuda a los clientes a encontrarte)."
   );
+  const [acceptedPolicy, setAcceptedPolicy] = useState(draft?.acceptedPolicy || false);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     try {
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, especialidades, photos, loc }));
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ form, especialidades, photos, loc, acceptedPolicy }));
     } catch {
       // si no cabe en sessionStorage simplemente no se recupera el borrador
     }
-  }, [form, especialidades, photos, loc]);
+  }, [form, especialidades, photos, loc, acceptedPolicy]);
 
   function update(field, value) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -111,6 +121,7 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
       fotos: !fotosOk,
       password: form.password.length < 6,
       confirmPassword: form.password !== form.confirmPassword,
+      policy: !acceptedPolicy,
     };
     setErrors(next);
     if (Object.values(next).some(Boolean)) {
@@ -155,6 +166,7 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
     setEspecialidades([]);
     setPhotos(EMPTY_PHOTOS);
     setLoc(null);
+    setAcceptedPolicy(false);
     sessionStorage.removeItem(DRAFT_KEY);
     onNavigate("providerSuccess");
   }
@@ -264,12 +276,11 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
                 Contraseña <span className="req">*</span>
                 <span className="hint">Para entrar después a ver tu perfil</span>
               </label>
-              <input
-                type="password"
+              <PasswordInput
                 placeholder="Mínimo 6 caracteres"
                 autoComplete="new-password"
                 value={form.password}
-                onChange={(e) => update("password", e.target.value)}
+                onChange={(v) => update("password", v)}
               />
               <span className="err-msg">Mínimo 6 caracteres.</span>
             </div>
@@ -277,12 +288,11 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
               <label>
                 Confirmar contraseña <span className="req">*</span>
               </label>
-              <input
-                type="password"
+              <PasswordInput
                 placeholder="Repite tu contraseña"
                 autoComplete="new-password"
                 value={form.confirmPassword}
-                onChange={(e) => update("confirmPassword", e.target.value)}
+                onChange={(v) => update("confirmPassword", v)}
               />
               <span className="err-msg">Las contraseñas no coinciden.</span>
             </div>
@@ -327,6 +337,33 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
           </div>
           <div className={`field-group ${errors.fotos ? "has-error" : ""}`} style={{ marginTop: 10 }}>
             <span className="err-msg">Debes cargar las 4 fotos: perfil, selfie y cédula (frente y reverso).</span>
+          </div>
+
+          <p className="hint" style={{ display: "block", marginTop: 14, marginBottom: 8 }}>
+            Fotos de trabajos que has realizado — opcional, hasta 3, ayuda a que los clientes vean lo que haces.
+          </p>
+          <div className="photo-grid">
+            <PhotoSlot
+              slotKey="trabajo1"
+              title="Trabajo 1"
+              hint="Opcional"
+              value={photos.trabajo1}
+              onChange={handlePhotoChange}
+            />
+            <PhotoSlot
+              slotKey="trabajo2"
+              title="Trabajo 2"
+              hint="Opcional"
+              value={photos.trabajo2}
+              onChange={handlePhotoChange}
+            />
+            <PhotoSlot
+              slotKey="trabajo3"
+              title="Trabajo 3"
+              hint="Opcional"
+              value={photos.trabajo3}
+              onChange={handlePhotoChange}
+            />
           </div>
 
           <div className="section-divider">
@@ -399,31 +436,22 @@ export default function RegisterProvider({ setProviders, categories, onNavigate,
 
           <div className="section-divider">
             <span className="num">5</span>
-            <h4>Redes sociales</h4>
+            <h4>Video de tu trabajo</h4>
           </div>
-          <div className="field-row two">
-            <div className="field-group">
-              <label>
-                Instagram <span className="hint">Opcional</span>
-              </label>
-              <input
-                type="url"
-                placeholder="https://instagram.com/tu_usuario"
-                value={form.instagramUrl}
-                onChange={(e) => update("instagramUrl", e.target.value)}
-              />
-            </div>
-            <div className="field-group">
-              <label>
-                TikTok <span className="hint">Opcional</span>
-              </label>
-              <input
-                type="url"
-                placeholder="https://tiktok.com/@tu_usuario"
-                value={form.tiktokUrl}
-                onChange={(e) => update("tiktokUrl", e.target.value)}
-              />
-            </div>
+          <div className="field-group">
+            <label>
+              Link de YouTube <span className="hint">Opcional</span>
+            </label>
+            <input
+              type="url"
+              placeholder="https://youtube.com/watch?v=..."
+              value={form.youtubeUrl}
+              onChange={(e) => update("youtubeUrl", e.target.value)}
+            />
+          </div>
+
+          <div style={{ marginTop: 18 }}>
+            <PolicyCheckbox checked={acceptedPolicy} onChange={setAcceptedPolicy} error={errors.policy} />
           </div>
 
           <div style={{ marginTop: 26 }}>
