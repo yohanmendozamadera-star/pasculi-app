@@ -257,6 +257,16 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--teal-500);outlin
 .status-aprobado{background:var(--teal-100);color:var(--teal-700);}
 .status-rechazado{background:var(--coral-100);color:#B23A20;}
 
+.status-request-pendiente{background:var(--mango-100);color:#8A5A05;}
+.status-request-aceptado{background:var(--teal-100);color:var(--teal-700);}
+.status-request-completado{background:var(--teal-700);color:#fff;}
+.status-request-rechazado{background:var(--coral-100);color:#B23A20;}
+.status-request-cancelado{background:var(--bg);color:var(--text-muted);}
+
+.request-list{display:flex;flex-direction:column;gap:10px;}
+.request-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;}
+.request-top{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+
 /* ---------- Admin ---------- */
 .admin-tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:22px;padding-bottom:2px;}
 .admin-tabs button{

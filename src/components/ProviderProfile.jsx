@@ -1,12 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeftIcon, ClientIcon, PlayIcon } from "./Icons.jsx";
-import { incrementProviderViews, getProviderShowcasePhotos } from "../lib/storage.js";
+import { incrementProviderViews, getProviderShowcasePhotos, createServiceRequest } from "../lib/storage.js";
+import { isValidEmail, isValidPhone } from "../lib/image.js";
 import ImageLightbox from "./admin/ImageLightbox.jsx";
 
-export default function ProviderProfile({ provider, onNavigate }) {
+const EMPTY_REQUEST = { nombre: "", celular: "", correo: "", mensaje: "" };
+
+export default function ProviderProfile({ provider, onNavigate, toast }) {
   const counted = useRef(false);
   const [photos, setPhotos] = useState(null);
   const [lightbox, setLightbox] = useState(null);
+  const [requesting, setRequesting] = useState(false);
+  const [requestForm, setRequestForm] = useState(EMPTY_REQUEST);
+  const [requestErrors, setRequestErrors] = useState({});
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
 
   useEffect(() => {
     if (!provider) return;
@@ -20,6 +28,30 @@ export default function ProviderProfile({ provider, onNavigate }) {
   if (!provider) {
     onNavigate("browseProviders");
     return null;
+  }
+
+  async function handleSendRequest(e) {
+    e.preventDefault();
+    const next = {
+      nombre: !requestForm.nombre.trim(),
+      celular: !isValidPhone(requestForm.celular),
+      correo: !isValidEmail(requestForm.correo),
+    };
+    setRequestErrors(next);
+    if (Object.values(next).some(Boolean)) {
+      toast("Revisa los campos marcados en rojo.");
+      return;
+    }
+    setSending(true);
+    const ok = await createServiceRequest(provider.id, requestForm);
+    setSending(false);
+    if (ok) {
+      setSent(true);
+      setRequesting(false);
+      setRequestForm(EMPTY_REQUEST);
+    } else {
+      toast("No se pudo enviar la solicitud, intenta de nuevo.");
+    }
   }
 
   const trabajos = [photos?.trabajo1, photos?.trabajo2, photos?.trabajo3].filter(Boolean);
@@ -90,9 +122,77 @@ export default function ProviderProfile({ provider, onNavigate }) {
           <p>Aún sin calificaciones de clientes.</p>
         </div>
 
-        <button className="btn-primary" style={{ width: "100%", marginTop: 20 }} onClick={() => onNavigate("registerClient")}>
-          Contactar a {provider.nombreCompleto.split(" ")[0]}
-        </button>
+        {sent ? (
+          <div className="empty-state" style={{ marginTop: 20 }}>
+            <h3>¡Solicitud enviada!</h3>
+            <p>{provider.nombreCompleto.split(" ")[0]} verá tu solicitud y te contactará pronto.</p>
+          </div>
+        ) : !requesting ? (
+          <button className="btn-primary" style={{ width: "100%", marginTop: 20 }} onClick={() => setRequesting(true)}>
+            Solicitar servicio a {provider.nombreCompleto.split(" ")[0]}
+          </button>
+        ) : (
+          <form onSubmit={handleSendRequest} style={{ marginTop: 20 }} noValidate>
+            <div className="section-divider">
+              <h4>Cuéntale qué necesitas</h4>
+            </div>
+            <div className={`field-group ${requestErrors.nombre ? "has-error" : ""}`}>
+              <label>
+                Tu nombre <span className="req">*</span>
+              </label>
+              <input
+                type="text"
+                value={requestForm.nombre}
+                onChange={(e) => setRequestForm((f) => ({ ...f, nombre: e.target.value }))}
+              />
+              <span className="err-msg">Ingresa tu nombre.</span>
+            </div>
+            <div className="field-row two">
+              <div className={`field-group ${requestErrors.celular ? "has-error" : ""}`}>
+                <label>
+                  Celular <span className="req">*</span>
+                </label>
+                <input
+                  type="tel"
+                  placeholder="300 000 0000"
+                  value={requestForm.celular}
+                  onChange={(e) => setRequestForm((f) => ({ ...f, celular: e.target.value }))}
+                />
+                <span className="err-msg">Ingresa un celular válido.</span>
+              </div>
+              <div className={`field-group ${requestErrors.correo ? "has-error" : ""}`}>
+                <label>
+                  Correo <span className="req">*</span>
+                </label>
+                <input
+                  type="email"
+                  placeholder="nombre@correo.com"
+                  value={requestForm.correo}
+                  onChange={(e) => setRequestForm((f) => ({ ...f, correo: e.target.value }))}
+                />
+                <span className="err-msg">Ingresa un correo válido.</span>
+              </div>
+            </div>
+            <div className="field-group">
+              <label>
+                ¿Qué necesitas? <span className="hint">Opcional</span>
+              </label>
+              <textarea
+                rows={3}
+                value={requestForm.mensaje}
+                onChange={(e) => setRequestForm((f) => ({ ...f, mensaje: e.target.value }))}
+              />
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="submit" className="btn-primary" disabled={sending}>
+                {sending ? "Enviando…" : "Enviar solicitud"}
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => setRequesting(false)}>
+                Cancelar
+              </button>
+            </div>
+          </form>
+        )}
       </div>
 
       <ImageLightbox src={lightbox?.src} alt={lightbox?.alt} onClose={() => setLightbox(null)} />

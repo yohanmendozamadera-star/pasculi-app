@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getMyProviderProfile, getProviderPhotoUrls, replaceProviderPhoto, updateProviderProfile } from "../lib/storage.js";
 import { supabase } from "../lib/supabaseClient.js";
 import PhotoSlot from "./PhotoSlot.jsx";
+import ProviderRequests from "./ProviderRequests.jsx";
 
 const PHOTO_SLOTS = [
   { key: "fotoPerfil", title: "Foto de perfil", hint: "Desde tu galería" },
@@ -21,6 +22,7 @@ export default function ProviderDashboard({ categories, toast }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [tab, setTab] = useState("perfil");
 
   async function load() {
     const p = await getMyProviderProfile();
@@ -107,6 +109,19 @@ export default function ProviderDashboard({ categories, toast }) {
           </button>
         </div>
 
+        <div className="admin-tabs" style={{ marginTop: 16 }}>
+          <button className={tab === "perfil" ? "active" : ""} onClick={() => setTab("perfil")}>
+            Mi perfil
+          </button>
+          <button className={tab === "solicitudes" ? "active" : ""} onClick={() => setTab("solicitudes")}>
+            Solicitudes
+          </button>
+        </div>
+
+        {tab === "solicitudes" ? (
+          <ProviderRequests providerId={profile.id} toast={toast} />
+        ) : (
+          <>
         <div className="stats-row" style={{ marginTop: 18, marginBottom: 18 }}>
           <div className="stat-card">
             <div className="stat-num">
@@ -213,6 +228,8 @@ export default function ProviderDashboard({ categories, toast }) {
             />
           ))}
         </div>
+          </>
+        )}
       </div>
     </div>
   );

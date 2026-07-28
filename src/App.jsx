@@ -144,7 +144,9 @@ export default function App() {
           />
         )}
 
-        {view === "providerProfile" && <ProviderProfile provider={selectedProvider} onNavigate={navigate} />}
+        {view === "providerProfile" && (
+          <ProviderProfile provider={selectedProvider} onNavigate={navigate} toast={toast} />
+        )}
 
         {view === "topRated" && (
           <ComingSoon

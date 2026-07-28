@@ -427,6 +427,61 @@ export async function insertClient(form, ubicacion) {
   };
 }
 
+// ── Solicitudes de servicio ──────────────────────────────
+
+function requestFromRow(row) {
+  return {
+    id: row.id,
+    providerId: row.provider_id,
+    clienteNombre: row.cliente_nombre,
+    clienteCelular: row.cliente_celular,
+    clienteCorreo: row.cliente_correo,
+    mensaje: row.mensaje,
+    estado: row.estado,
+    timestamp: row.created_at,
+  };
+}
+
+export async function createServiceRequest(providerId, { nombre, celular, correo, mensaje }) {
+  const { error } = await supabase.from("service_requests").insert({
+    provider_id: providerId,
+    cliente_nombre: nombre,
+    cliente_celular: celular,
+    cliente_correo: correo,
+    mensaje: mensaje || null,
+  });
+  if (error) {
+    console.error("No se pudo enviar la solicitud", error);
+    return false;
+  }
+  return true;
+}
+
+export async function getMyServiceRequests(providerId) {
+  const { data, error } = await supabase
+    .from("service_requests")
+    .select("*")
+    .eq("provider_id", providerId)
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("No se pudieron cargar las solicitudes", error);
+    return [];
+  }
+  return data.map(requestFromRow);
+}
+
+export async function updateServiceRequestStatus(id, estado) {
+  const { error } = await supabase
+    .from("service_requests")
+    .update({ estado, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) {
+    console.error("No se pudo actualizar la solicitud", error);
+    return false;
+  }
+  return true;
+}
+
 // ── Categorías ───────────────────────────────────────────
 
 export async function getCategories() {
