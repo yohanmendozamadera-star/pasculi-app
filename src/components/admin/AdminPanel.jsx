@@ -12,10 +12,13 @@ import {
   setCategorySpecialties,
 } from "../../lib/storage.js";
 import ProviderModal from "./ProviderModal.jsx";
+import BusinessModal from "./BusinessModal.jsx";
+import { updateBusinessStatus } from "../../lib/businessStorage.js";
 
 const TABS = [
   { key: "dashboard", label: "Dashboard" },
   { key: "proveedores", label: "Proveedores" },
+  { key: "negocios", label: "Negocios" },
   { key: "clientes", label: "Clientes" },
   { key: "categorias", label: "Categorías" },
 ];
@@ -23,6 +26,8 @@ const TABS = [
 export default function AdminPanel({
   providers,
   setProviders,
+  businesses,
+  setBusinesses,
   clients,
   categories,
   setCategories,
@@ -43,7 +48,7 @@ export default function AdminPanel({
           Cerrar sesión
         </button>
       </div>
-      {tab === "dashboard" && <Dashboard providers={providers} clients={clients} />}
+      {tab === "dashboard" && <Dashboard providers={providers} clients={clients} businesses={businesses} />}
       {tab === "proveedores" && (
         <ProvidersTab
           providers={providers}
@@ -51,6 +56,9 @@ export default function AdminPanel({
           categories={categories}
           toast={toast}
         />
+      )}
+      {tab === "negocios" && (
+        <BusinessesTab businesses={businesses} setBusinesses={setBusinesses} toast={toast} />
       )}
       {tab === "clientes" && <ClientsTab clients={clients} />}
       {tab === "categorias" && (
@@ -60,11 +68,13 @@ export default function AdminPanel({
   );
 }
 
-function Dashboard({ providers, clients }) {
+function Dashboard({ providers, clients, businesses }) {
   const total = providers.length;
   const aprobados = providers.filter((p) => p.estado === "aprobado").length;
   const pendientes = providers.filter((p) => p.estado === "pendiente").length;
   const porCiudad = CIUDADES.map((c) => ({ c, n: providers.filter((p) => p.ciudad === c).length }));
+  const negociosAprobados = businesses.filter((b) => b.estado === "aprobado").length;
+  const negociosPendientes = businesses.filter((b) => b.estado === "pendiente").length;
 
   return (
     <>
@@ -94,6 +104,17 @@ function Dashboard({ providers, clients }) {
             <div className="stat-label">{x.c}</div>
           </div>
         ))}
+      </div>
+      <h3 className="section-title">Directorio de negocios</h3>
+      <div className="stats-row" style={{ gridTemplateColumns: "repeat(2,1fr)" }}>
+        <div className="stat-card">
+          <div className="stat-num">{negociosAprobados}</div>
+          <div className="stat-label">Negocios aprobados</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-num">{negociosPendientes}</div>
+          <div className="stat-label">Pendientes por revisar</div>
+        </div>
       </div>
     </>
   );
@@ -264,6 +285,124 @@ function ProvidersTab({ providers, setProviders, categories, toast }) {
         onReject={(id) => updateStatus(id, "rechazado")}
         onReplacePhoto={handleReplacePhoto}
         onDeletePhoto={handleDeletePhoto}
+      />
+    </>
+  );
+}
+
+function BusinessesTab({ businesses, setBusinesses, toast }) {
+  const [filters, setFilters] = useState({ ciudad: "", estado: "", q: "" });
+  const [modalBusiness, setModalBusiness] = useState(null);
+
+  async function updateStatus(id, estado) {
+    const ok = await updateBusinessStatus(id, estado);
+    if (ok) {
+      setBusinesses((list) => list.map((b) => (b.id === id ? { ...b, estado } : b)));
+      toast(estado === "aprobado" ? "Negocio aprobado." : "Negocio rechazado.");
+      setModalBusiness((prev) => (prev ? { ...prev, estado } : prev));
+    } else {
+      toast("No se pudo actualizar el estado.");
+    }
+  }
+
+  let list = [...businesses].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  if (filters.ciudad) list = list.filter((b) => b.ciudad === filters.ciudad);
+  if (filters.estado) list = list.filter((b) => b.estado === filters.estado);
+  if (filters.q) {
+    const q = filters.q.toLowerCase();
+    list = list.filter(
+      (b) => b.nombreNegocio.toLowerCase().includes(q) || b.celular.includes(q) || b.nombreContacto.toLowerCase().includes(q)
+    );
+  }
+
+  return (
+    <>
+      <div className="filter-bar">
+        <select value={filters.ciudad} onChange={(e) => setFilters((f) => ({ ...f, ciudad: e.target.value }))}>
+          <option value="">Todas las ciudades</option>
+          {CIUDADES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <select value={filters.estado} onChange={(e) => setFilters((f) => ({ ...f, estado: e.target.value }))}>
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="aprobado">Aprobado</option>
+          <option value="rechazado">Rechazado</option>
+        </select>
+        <input
+          type="text"
+          placeholder="Buscar por negocio, contacto o celular"
+          value={filters.q}
+          onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
+        />
+      </div>
+
+      {list.length === 0 ? (
+        <div className="empty-state">
+          <h3>No hay negocios con estos filtros</h3>
+          <p>Ajusta los filtros o espera nuevos registros.</p>
+        </div>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Negocio</th>
+                <th>Celular</th>
+                <th>Ciudad</th>
+                <th>Categoría</th>
+                <th>Vistas/Clics</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((b) => (
+                <tr key={b.id}>
+                  <td>{b.nombreNegocio}</td>
+                  <td>{b.celular}</td>
+                  <td>{b.ciudad}</td>
+                  <td>
+                    <span className="badge badge-cat">{b.categoria}</span>
+                  </td>
+                  <td>
+                    {b.profileViews ?? 0} / {b.contactClicks ?? 0}
+                  </td>
+                  <td>
+                    <span className={`status-pill status-${b.estado}`}>{b.estado.toUpperCase()}</span>
+                  </td>
+                  <td>{fmtDate(b.timestamp)}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>
+                    <button className="row-btn" onClick={() => setModalBusiness(b)}>
+                      Ver
+                    </button>
+                    {b.estado !== "aprobado" && (
+                      <button className="row-btn approve" onClick={() => updateStatus(b.id, "aprobado")}>
+                        Aprobar
+                      </button>
+                    )}
+                    {b.estado !== "rechazado" && (
+                      <button className="row-btn reject" onClick={() => updateStatus(b.id, "rechazado")}>
+                        Rechazar
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <BusinessModal
+        business={modalBusiness}
+        onClose={() => setModalBusiness(null)}
+        onApprove={(id) => updateStatus(id, "aprobado")}
+        onReject={(id) => updateStatus(id, "rechazado")}
       />
     </>
   );

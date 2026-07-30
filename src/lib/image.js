@@ -58,3 +58,10 @@ export function isValidEmail(v) {
 export function isValidPhone(v) {
   return /^[0-9+\s-]{7,15}$/.test(v);
 }
+
+export function fmtPrice(precio) {
+  if (precio === null || precio === undefined || precio === "") return null;
+  return new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(
+    precio
+  );
+}

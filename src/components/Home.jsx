@@ -1,4 +1,4 @@
-import { ClientIcon, ProviderIcon } from "./Icons.jsx";
+import { ClientIcon, ProviderIcon, SearchIcon } from "./Icons.jsx";
 
 export default function Home({ providers, categories, onNavigate }) {
   const aprobados = providers.filter((p) => p.estado === "aprobado").length;
@@ -21,7 +21,7 @@ export default function Home({ providers, categories, onNavigate }) {
         </div>
       </section>
 
-      <div className="cta-grid">
+      <div className="cta-grid cols-3">
         <button className="cta-card" onClick={() => onNavigate("clientOptions")}>
           <div className="cta-icon teal">
             <ClientIcon width="22" height="22" />
@@ -29,6 +29,14 @@ export default function Home({ providers, categories, onNavigate }) {
           <h3>Soy cliente</h3>
           <p>Regístrate en segundos y encuentra proveedores verificados para lo que necesites.</p>
           <span className="cta-arrow">Registrarme como cliente →</span>
+        </button>
+        <button className="cta-card" onClick={() => onNavigate("businessDirectory")}>
+          <div className="cta-icon coral">
+            <SearchIcon width="22" height="22" />
+          </div>
+          <h3>Directorio de negocios</h3>
+          <p>Busca productos y encuentra qué negocios los tienen, con foto y precio.</p>
+          <span className="cta-arrow">Buscar productos →</span>
         </button>
         <button className="cta-card" onClick={() => onNavigate("providerOptions")}>
           <div className="cta-icon mango">

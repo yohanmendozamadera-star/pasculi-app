@@ -14,8 +14,12 @@ import AdminLogin from "./components/admin/AdminLogin.jsx";
 import AdminPanel from "./components/admin/AdminPanel.jsx";
 import ProviderLogin from "./components/ProviderLogin.jsx";
 import ProviderDashboard from "./components/ProviderDashboard.jsx";
+import BusinessDirectory from "./components/BusinessDirectory.jsx";
+import RegisterBusiness from "./components/RegisterBusiness.jsx";
+import ProductDetail from "./components/ProductDetail.jsx";
 import { StarIcon, ClipboardIcon } from "./components/Icons.jsx";
 import { getProviders, getClients, getCategories, checkIsAdmin } from "./lib/storage.js";
+import { getBusinesses } from "./lib/businessStorage.js";
 import { supabase } from "./lib/supabaseClient.js";
 
 // En celular, abrir la cámara (para la selfie o la foto de cédula) puede
@@ -34,10 +38,12 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [providers, setProviders] = useState([]);
   const [clients, setClients] = useState([]);
+  const [businesses, setBusinesses] = useState([]);
   const [categories, setCategories] = useState({});
   const [session, setSession] = useState(null);
   const [lastProvider, setLastProvider] = useState(null);
   const [selectedProvider, setSelectedProvider] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [toastMsg, setToastMsg] = useState("");
   const toastTimer = useRef(null);
 
@@ -78,9 +84,10 @@ export default function App() {
       setIsAdmin(admin);
       setRoleChecked(true);
       if (admin) {
-        const [p, c] = await Promise.all([getProviders(), getClients()]);
+        const [p, c, b] = await Promise.all([getProviders(), getClients(), getBusinesses()]);
         setProviders(p);
         setClients(c);
+        setBusinesses(b);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,6 +138,20 @@ export default function App() {
         {view === "clientOptions" && <ClientOptions onNavigate={navigate} />}
 
         {view === "providerOptions" && <ProviderOptions onNavigate={navigate} />}
+
+        {view === "businessDirectory" && (
+          <BusinessDirectory
+            onNavigate={navigate}
+            onOpenProduct={(p) => {
+              setSelectedProduct(p);
+              navigate("productDetail");
+            }}
+          />
+        )}
+
+        {view === "registerBusiness" && <RegisterBusiness onNavigate={navigate} toast={toast} />}
+
+        {view === "productDetail" && <ProductDetail product={selectedProduct} onNavigate={navigate} />}
 
         {view === "browseProviders" && (
           <BrowseProviders
@@ -191,6 +212,8 @@ export default function App() {
             <AdminPanel
               providers={providers}
               setProviders={setProviders}
+              businesses={businesses}
+              setBusinesses={setBusinesses}
               clients={clients}
               categories={categories}
               setCategories={setCategories}
