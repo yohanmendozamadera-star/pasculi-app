@@ -31,11 +31,12 @@ export default function BusinessDirectory({ onNavigate, onOpenProduct }) {
       <form onSubmit={handleSearch} style={{ display: "flex", gap: 8, marginBottom: 20 }}>
         <input
           type="text"
+          style={{ flex: 1, minWidth: 0 }}
           placeholder="¿Qué estás buscando? Ej. torta, camisa, celular…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <button type="submit" className="btn-primary" style={{ flexShrink: 0 }} disabled={searching}>
+        <button type="submit" className="btn-primary" style={{ width: "auto", flexShrink: 0 }} disabled={searching}>
           <SearchIcon width="16" height="16" style={{ marginRight: 6, verticalAlign: "-3px" }} />
           {searching ? "Buscando…" : "Buscar"}
         </button>
